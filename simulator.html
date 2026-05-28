@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kliniksimulatorn — Produktionsledning</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,900&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1b2a3a; --paper:#fbf6ee; --paper2:#f4ebdd;
+    --teal:#0f8a8a; --teal-dk:#0a6464; --coral:#ff6b5e; --amber:#ffb627;
+    --green:#3fb27f; --red:#e8543f; --blue:#3d7ab2; --purple:#8a6fb0;
+    --line:#e4d9c6;
+    --shadow:0 18px 40px -18px rgba(27,42,58,.35);
+    --shadow-sm:0 8px 20px -12px rgba(27,42,58,.4);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:'Outfit',sans-serif;color:var(--ink);
+    background:
+      radial-gradient(1200px 600px at 85% -10%, #fde9c8 0%, transparent 55%),
+      radial-gradient(900px 500px at -10% 110%, #cdeeee 0%, transparent 50%),
+      var(--paper);
+    min-height:100vh;-webkit-font-smoothing:antialiased;padding:28px 18px 70px;
+  }
+  .wrap{max-width:1020px;margin:0 auto}
+  .eyebrow{font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--teal-dk);font-weight:600;text-align:center}
+  h1.title{font-family:'Fraunces',serif;font-weight:900;font-size:clamp(30px,5vw,48px);line-height:1.04;text-align:center;margin-top:6px}
+  h1.title .em{color:var(--teal);font-style:italic}
+  .sub{text-align:center;color:#6d6151;font-size:15.5px;margin-top:10px;max-width:60ch;margin-inline:auto}
+
+  .view{display:none;animation:fadeUp .5s ease both}
+  .view.active{display:block}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+  @keyframes pop{0%{transform:scale(.85)}60%{transform:scale(1.08)}100%{transform:scale(1)}}
+  .pop{animation:pop .4s ease}
+
+  /* ---- Setup screen ---- */
+  .setup{margin-top:30px;display:grid;gap:20px}
+  .block{background:#fff;border:1.5px solid var(--line);border-radius:22px;box-shadow:var(--shadow);padding:24px 26px}
+  .block h3{font-family:'Fraunces',serif;font-weight:600;font-size:20px;margin-bottom:4px}
+  .block .hint{color:#8a7d6a;font-size:14px;margin-bottom:18px}
+  .choices{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:620px){.choices{grid-template-columns:1fr}}
+  .choice{border:2px solid var(--line);border-radius:16px;padding:18px;cursor:pointer;transition:all .15s;background:var(--paper)}
+  .choice:hover{transform:translateY(-3px);border-color:var(--teal)}
+  .choice.sel{border-color:var(--teal);background:#eef7f7;box-shadow:var(--shadow-sm)}
+  .choice .ct{font-weight:700;font-size:16px;margin-bottom:5px}
+  .choice .cd{font-size:13.5px;color:#6d6151;line-height:1.45}
+  .startbtn{width:100%;margin-top:4px}
+
+  .btn{font-family:'Outfit';font-weight:600;font-size:15px;border:none;border-radius:13px;cursor:pointer;
+    padding:14px 28px;background:var(--teal);color:#fff;box-shadow:var(--shadow-sm);transition:transform .15s,background .2s}
+  .btn:hover{transform:translateY(-2px);background:var(--teal-dk)}
+  .btn[disabled]{opacity:.4;cursor:not-allowed;transform:none}
+  .btn.ghost{background:#fff;color:var(--teal-dk);border:1.5px solid var(--teal)}
+  .btn.ghost:hover{background:#eef7f7}
+  .btn.big{font-size:17px;padding:16px 30px}
+  .back{background:none;border:none;cursor:pointer;color:var(--teal-dk);font-weight:600;font-size:15px;display:inline-flex;gap:7px;align-items:center;margin-bottom:16px;padding:6px 2px}
+  .back:hover{gap:11px}
+
+  /* ---- Game layout ---- */
+  .gamehead{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:16px}
+  .weekpill{font-family:'Fraunces',serif;font-weight:900;font-size:26px}
+  .weekpill small{font-size:15px;color:#a99c87;font-weight:400;font-family:'Outfit'}
+  .missionbar{background:#fff;border:1.5px solid var(--line);border-radius:14px;padding:10px 16px;font-size:13.5px;color:#6d6151;display:flex;gap:18px;flex-wrap:wrap;align-items:center}
+  .missionbar b{color:var(--ink)}
+
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media(max-width:760px){.grid{grid-template-columns:1fr}}
+
+  /* metrics */
+  .metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  @media(max-width:620px){.metrics{grid-template-columns:1fr 1fr}}
+  .metric{background:#fff;border:1.5px solid var(--line);border-radius:16px;padding:14px 16px;transition:background .3s,border-color .3s}
+  .metric .lab{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#8a7d6a;font-weight:600}
+  .metric .val{font-family:'Fraunces',serif;font-weight:900;font-size:26px;line-height:1.05;margin-top:3px}
+  .metric .delta{font-size:12px;font-weight:600;margin-top:2px}
+  .metric.ok{background:#e9f7ef;border-color:#bce5cf}
+  .metric.warn{background:#fff3da;border-color:#f3dca5}
+  .metric.danger{background:#fdeae6;border-color:#f6c4ba}
+  .up{color:var(--green)} .down{color:var(--red)}
+
+  .controls{background:#fff;border:1.5px solid var(--line);border-radius:20px;box-shadow:var(--shadow);padding:22px 24px}
+  .controls h3{font-family:'Fraunces',serif;font-weight:600;font-size:19px;margin-bottom:2px}
+  .controls .hint{color:#8a7d6a;font-size:13px;margin-bottom:18px}
+  .ctrl{margin-bottom:18px}
+  .ctrl label{display:flex;justify-content:space-between;font-weight:600;font-size:14.5px;margin-bottom:8px}
+  .ctrl label b{font-family:'Fraunces',serif;color:var(--teal-dk);font-size:17px}
+  .ctrl .modtag{font-size:10.5px;color:#a99c87;font-weight:600;letter-spacing:.04em}
+  input[type=range]{-webkit-appearance:none;width:100%;height:8px;border-radius:999px;background:var(--paper2);outline:none;cursor:pointer;border:1px solid var(--line)}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;border-radius:50%;background:#fff;border:4px solid var(--teal);box-shadow:var(--shadow-sm);cursor:grab}
+  input[type=range]::-moz-range-thumb{width:24px;height:24px;border-radius:50%;background:#fff;border:4px solid var(--teal);cursor:grab}
+
+  .chartcard{background:#fff;border:1.5px solid var(--line);border-radius:20px;box-shadow:var(--shadow);padding:20px 22px;margin-top:18px}
+  .chartcard h3{font-family:'Fraunces',serif;font-weight:600;font-size:18px;margin-bottom:12px}
+  svg{display:block;width:100%;height:auto}
+
+  .runrow{margin-top:18px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  .log{margin-top:14px;background:var(--paper);border:1px dashed var(--line);border-radius:14px;padding:14px 16px;font-size:14px;line-height:1.55;color:#3a3528;min-height:54px}
+  .log .tag{font-weight:700;color:var(--teal-dk)}
+
+  .lean{display:inline-flex;align-items:center;gap:8px;background:#f1ecf8;border:1px solid #ddd0ee;border-radius:12px;padding:10px 14px;font-size:13.5px;color:#5a4880;font-weight:600;cursor:pointer;transition:transform .15s}
+  .lean:hover{transform:translateY(-2px)}
+  .lean[disabled]{opacity:.45;cursor:not-allowed;transform:none}
+
+  /* result */
+  .result{text-align:center;padding:10px 0}
+  .scorebig{font-family:'Fraunces',serif;font-weight:900;font-size:64px;line-height:1;color:var(--teal)}
+  .grade{font-family:'Fraunces',serif;font-weight:900;font-size:30px;margin-top:4px}
+  .resmsg{font-size:16px;color:#6d6151;margin:14px auto 22px;max-width:54ch;line-height:1.6}
+  .rescard{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:16px 18px;text-align:left;font-size:14px;line-height:1.6;margin:16px auto;max-width:60ch}
+  .rescard b{color:var(--teal-dk)}
+  .resbtns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:8px}
+  .confetti{position:fixed;width:10px;height:14px;top:-20px;z-index:60;border-radius:2px;pointer-events:none}
+  footer.foot{text-align:center;margin-top:30px;color:#a99c87;font-size:12.5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ===== SETUP ===== -->
+  <section id="setup" class="view active">
+    <div style="margin-bottom:14px"><a href="modul4.html" style="color:var(--teal-dk);font-weight:600;font-size:14px;text-decoration:none">← Tillbaka till kursen</a></div>
+    <div class="eyebrow">Folktandvården · Spår 1</div>
+    <h1 class="title">Klinik&shy;simulatorn</h1>
+    <p class="sub">Driv en klinik vecka för vecka. Sätt bemanning, bokning och buffertar — och se köer, ekonomi och personalnöjdhet svara. Allt vilar på kursens samband: flaskhalsen, variationen, beläggningskurvan och Lilles lag.</p>
+
+    <div class="setup">
+      <div class="block">
+        <h3>1 · Välj kliniktyp</h3>
+        <p class="hint">De beter sig olika — allmäntandvården lever med akutflöde och uteblivanden, specialisttandvården med remisser och lång väntelista.</p>
+        <div class="choices" id="typeChoices">
+          <div class="choice" data-type="allman" onclick="pick('type','allman',this)">
+            <div class="ct">🦷 Allmäntandvård</div>
+            <div class="cd">Blandat akut och planerat. Uteblivanden och behandlingar som drar över är dina vardagsutmaningar.</div>
+          </div>
+          <div class="choice" data-type="specialist" onclick="pick('type','specialist',this)">
+            <div class="ct">🔬 Specialisttandvård</div>
+            <div class="cd">Remissdrivet med lång väntelista. Genomloppstid från remiss till klar är det som räknas.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="block">
+        <h3>2 · Välj spelläge</h3>
+        <p class="hint">Uppdrag ger dig ett mål att klara på 14 veckor. Sandlådan är fri lek utan press.</p>
+        <div class="choices" id="modeChoices">
+          <div class="choice" data-mode="mission" onclick="pick('mode','mission',this)">
+            <div class="ct">🎯 Uppdrag</div>
+            <div class="cd">Klara säsongen: håll kötiden nere och gå inte back, trots en höstpik i efterfrågan. Poäng och betyg på slutet.</div>
+          </div>
+          <div class="choice" data-mode="sandbox" onclick="pick('mode','sandbox',this)">
+            <div class="ct">🧪 Sandlåda</div>
+            <div class="cd">Experimentera fritt. Skruva på rattarna och se sambanden utan mål eller tidsgräns.</div>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn big startbtn" id="startBtn" disabled onclick="startGame()">Välj båda för att börja</button>
+    </div>
+    <footer class="foot">Ett komplement till kursen <em>Införande i produktionsledning</em>. Siffrorna är illustrativa men sambanden äkta.</footer>
+  </section>
+
+  <!-- ===== GAME ===== -->
+  <section id="game" class="view">
+    <button class="back" onclick="resetToSetup()">← Avsluta</button>
+    <div class="gamehead">
+      <div class="weekpill">Vecka <span id="weekNo">1</span><small id="weekTot"> / 14</small></div>
+      <div class="missionbar" id="missionBar"></div>
+    </div>
+
+    <div class="metrics" id="metrics"></div>
+
+    <div class="grid" style="margin-top:18px">
+      <div class="controls">
+        <h3>Dina beslut</h3>
+        <p class="hint">Ställ in inför veckan och tryck <b>Kör veckan</b>.</p>
+
+        <div class="ctrl">
+          <label>Behandlare i tjänst <b id="vStaff">5</b></label>
+          <input type="range" id="cStaff" min="2" max="10" value="5" step="1" oninput="liveLabels()">
+          <div class="modtag">Kapacitet · Modul 3 — fler ökar takten men kostar mer</div>
+        </div>
+
+        <div class="ctrl">
+          <label>Hur fullt du bokar <b id="vBook">90%</b></label>
+          <input type="range" id="cBook" min="60" max="100" value="90" step="1" oninput="liveLabels()">
+          <div class="modtag">Beläggning · Modul 2 — nära 100 % skenar köerna</div>
+        </div>
+
+        <div class="ctrl">
+          <label>Buffert i tidboken <b id="vBuf">10%</b></label>
+          <input type="range" id="cBuf" min="0" max="30" value="10" step="1" oninput="liveLabels()">
+          <div class="modtag">Tidbok · Modul 4 — luft som fångar överdrag</div>
+        </div>
+
+        <div class="ctrl" id="acuteWrap">
+          <label>Reserverat för akut <b id="vAcute">15%</b></label>
+          <input type="range" id="cAcute" min="0" max="40" value="15" step="1" oninput="liveLabels()">
+          <div class="modtag">Separera flöden · Modul 4 — skyddar planerade besök</div>
+        </div>
+
+        <div class="runrow">
+          <button class="btn" id="runBtn" onclick="runWeek()">Kör veckan →</button>
+          <button class="lean" id="leanBtn" onclick="doLean()" title="Engångsinsats">✨ Flödesförbättring (Lean)</button>
+        </div>
+        <div class="log" id="log"><span class="tag">Tips:</span> Börja med att köra en vecka och se hur kliniken svarar. Justera sedan.</div>
+      </div>
+
+      <div>
+        <div class="chartcard">
+          <h3 id="chartTitle">Kötid över tid</h3>
+          <svg id="chart" viewBox="0 0 460 220" preserveAspectRatio="xMidYMid meet"></svg>
+        </div>
+        <div class="chartcard" style="margin-top:14px">
+          <h3>Beläggningens effekt just nu</h3>
+          <svg id="curve" viewBox="0 0 460 150" preserveAspectRatio="xMidYMid meet"></svg>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== RESULT ===== -->
+  <section id="result" class="view">
+    <div class="result" id="resultBody"></div>
+  </section>
+
+</div>
+
+<script>
+/* ===================== State ===================== */
+let S = {};
+const sel = { type:null, mode:null };
+
+function pick(group,val,el){
+  sel[group]=val;
+  el.parentNode.querySelectorAll('.choice').forEach(c=>c.classList.remove('sel'));
+  el.classList.add('sel');
+  const ready = sel.type && sel.mode;
+  const b=document.getElementById('startBtn');
+  b.disabled=!ready;
+  b.textContent = ready ? 'Starta klinik →' : 'Välj båda för att börja';
+}
+
+function show(id){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function resetToSetup(){ show('setup'); }
+
+/* ===================== Game init ===================== */
+function startGame(){
+  const isSpec = sel.type==='specialist';
+  S = {
+    type: sel.type, mode: sel.mode,
+    week: 1,
+    totalWeeks: sel.mode==='mission' ? 14 : 999,
+    // demand baseline (patients/week of capacity-equivalents)
+    baseDemand: isSpec ? 22 : 110,
+    capPerStaff: isSpec ? 5.5 : 28,   // patients one behandlare clears per week
+    waitlist: isSpec ? 120 : 24,    // patients currently in system
+    history: [],                     // {week, wait, queue}
+    money: 0,                        // kr (thousands), cumulative
+    morale: 80,                      // 0-100
+    leanUsed: false,
+    leanBonus: 0,                    // permanent waste reduction (0..0.2)
+    lastWait: null,
+    cumThroughput:0,
+    cumServiceHits:0, cumServiceTotal:0
+  };
+  document.getElementById('weekTot').textContent = sel.mode==='mission' ? ' / 14' : '';
+  document.getElementById('chartTitle').textContent = isSpec ? 'Genomloppstid (veckor) över tid' : 'Genomsnittlig väntetid (relativ) över tid';
+  // acute slider only meaningful for allmän
+  document.getElementById('acuteWrap').style.display = isSpec ? 'none' : 'block';
+  // reset controls
+  document.getElementById('cStaff').value = isSpec?6:5;
+  document.getElementById('cBook').value = 90;
+  document.getElementById('cBuf').value = 10;
+  document.getElementById('cAcute').value = 15;
+  document.getElementById('leanBtn').disabled=false;
+  document.getElementById('leanBtn').textContent='✨ Flödesförbättring (Lean)';
+  liveLabels();
+  renderMission();
+  renderMetrics(true);
+  drawHistory();
+  drawCurve(0.9);
+  document.getElementById('log').innerHTML='<span class="tag">Vecka 1.</span> Klinik igång. Ställ in dina rattar och kör veckan.';
+  show('game');
+}
+
+function liveLabels(){
+  document.getElementById('vStaff').textContent=document.getElementById('cStaff').value;
+  document.getElementById('vBook').textContent=document.getElementById('cBook').value+'%';
+  document.getElementById('vBuf').textContent=document.getElementById('cBuf').value+'%';
+  document.getElementById('vAcute').textContent=document.getElementById('cAcute').value+'%';
+  drawCurve(+document.getElementById('cBook').value/100);
+}
+
+function renderMission(){
+  const bar=document.getElementById('missionBar');
+  if(S.mode!=='mission'){ bar.innerHTML='<b>🧪 Sandlåda</b> — fri lek, inga mål.'; return; }
+  const goal = S.type==='specialist'
+    ? 'Mål: håll <b>genomloppstiden under 10 veckor</b> och gå inte back totalt.'
+    : 'Mål: håll <b>väntetiden låg</b>, personalen frisk och ekonomin på plus genom höstpiken.';
+  bar.innerHTML = goal;
+}
+
+/* ===================== Core simulation ===================== */
+function runWeek(){
+  const staff = +document.getElementById('cStaff').value;
+  const bookPct = +document.getElementById('cBook').value/100;
+  const buf = +document.getElementById('cBuf').value/100;
+  const acute = S.type==='specialist' ? 0 : +document.getElementById('cAcute').value/100;
+
+  // --- demand with seasonality + noise ---
+  // mission: autumn peak around weeks 6-9
+  let season=1;
+  if(S.mode==='mission'){
+    const w=S.week;
+    season = 1 + 0.28*Math.exp(-Math.pow((w-7)/2.5,2)); // gaussian peak ~week7
+  }
+  const noise = 1 + (Math.random()-0.5)*0.25;
+  const demand = S.baseDemand * season * noise;
+
+  // --- effective capacity ---
+  // raw capacity from staff; buffer & acute reservation remove usable planned slots,
+  // lean adds back usable capacity by removing waste
+  let raw = staff * S.capPerStaff;
+  const wasteFactor = 0.18 - S.leanBonus; // baseline 18% of time is removable waste
+  let usable = raw * (1 - Math.max(0,wasteFactor));
+  // booking fills usable up to bookPct; buffer & acute carve out planned throughput
+  let planned = usable * bookPct * (1 - buf) * (1 - acute*0.5);
+
+  // --- no-shows: worse when long lead time (big waitlist) and when little reminder buffer ---
+  const leadPressure = Math.min(1, S.waitlist / (S.baseDemand*3));
+  let noShow = (S.type==='specialist'? 0.06 : 0.12) + 0.10*leadPressure;
+  noShow = Math.max(0.03, noShow - acute*0.05); // acute handling slightly steadies
+  const delivered = planned * (1 - noShow);
+
+  // --- utilisation actually experienced ---
+  const util = Math.min(0.999, demand>0 ? Math.min(1, (demand)/(usable)) * bookPct : bookPct);
+
+  // --- waiting time via queueing curve (relative) ---
+  const rho = Math.min(0.985, bookPct - buf*0.4 + leadPressure*0.05);
+  let waitFactor = rho/(1-rho); // classic shape
+  // buffer dampens, lean dampens
+  waitFactor *= (1 - buf*0.5) * (1 - S.leanBonus*0.6);
+
+  // --- update waitlist (Little's law dynamics) ---
+  const inflow = demand;
+  S.waitlist = Math.max(0, S.waitlist + inflow - delivered);
+
+  // --- genomloppstid (Little): L = lambda * W  => W = L / lambda ---
+  const genomloppVeckor = inflow>0 ? S.waitlist / inflow : 0;
+
+  // --- economy: revenue per delivered minus staff cost minus idle waste ---
+  const revPer = S.type==='specialist'? 4.0 : 0.9; // kr thousands per delivered patient
+  const staffCost = staff * (S.type==='specialist'? 14 : 11); // per week
+  const idle = Math.max(0, usable - demand) * (S.type==='specialist'?1.2:0.25)*0.4;
+  const weekMoney = delivered*revPer - staffCost - idle;
+  S.money += weekMoney;
+
+  // --- morale: drops with high utilisation sustained, recovers with slack ---
+  let moraleDelta = 0;
+  if(rho>0.95) moraleDelta = -5;
+  else if(rho>0.90) moraleDelta = -3;
+  else if(rho>0.85) moraleDelta = -1;
+  else if(rho<0.78) moraleDelta = +4;
+  else moraleDelta = +2;
+  if(noShow>0.22) moraleDelta -= 1;
+  if(S.leanBonus>0) moraleDelta += 1; // smoother flow eases pressure
+  S.morale = Math.max(0, Math.min(100, S.morale + moraleDelta));
+
+  // --- service level tracking ---
+  const target = S.type==='specialist'? 10 : 6; // weeks / relative wait threshold
+  const measure = S.type==='specialist'? genomloppVeckor : waitFactor;
+  S.cumServiceTotal++;
+  if(measure<=target) S.cumServiceHits++;
+  S.cumThroughput += delivered;
+
+  // store history
+  const plotVal = S.type==='specialist'? genomloppVeckor : waitFactor;
+  S.history.push({week:S.week, val:plotVal, queue:S.waitlist, util:rho, money:weekMoney, morale:S.morale});
+  S.lastWait = plotVal;
+
+  // log narrative
+  logWeek({demand,delivered,noShow,rho,weekMoney,moraleDelta,genomloppVeckor,waitFactor});
+
+  renderMetrics(false);
+  drawHistory();
+  drawCurve(rho);
+
+  S.week++;
+  document.getElementById('weekNo').textContent = Math.min(S.week, S.totalWeeks);
+  if(S.mode==='mission' && S.week>S.totalWeeks){ endMission(); }
+}
+
+function logWeek(d){
+  const isSpec=S.type==='specialist';
+  let parts=[];
+  parts.push(`Efterfrågan ~${Math.round(d.demand)} ${isSpec?'remisser':'patienter'}, klart ${Math.round(d.delivered)}.`);
+  if(d.noShow>0.18) parts.push(`Uteblivandet kröp upp till ${Math.round(d.noShow*100)} %.`);
+  if(d.rho>0.92) parts.push(`<b style="color:var(--red)">Beläggningen nära taket — köerna byggs på.</b>`);
+  else if(d.rho<0.72) parts.push(`Gott om luft i schemat.`);
+  if(d.moraleDelta<=-5) parts.push(`Personalen är pressad.`);
+  else if(d.moraleDelta>=4) parts.push(`Personalen hämtar andan.`);
+  parts.push(d.weekMoney>=0?`Ekonomi +${Math.round(d.weekMoney)} tkr.`:`Ekonomi ${Math.round(d.weekMoney)} tkr.`);
+  document.getElementById('log').innerHTML = `<span class="tag">Vecka ${S.week}.</span> ` + parts.join(' ');
+}
+
+/* ===================== Lean one-off ===================== */
+function doLean(){
+  if(S.leanUsed) return;
+  S.leanUsed=true; S.leanBonus=0.12; // removes much of the waste, permanently
+  document.getElementById('leanBtn').disabled=true;
+  document.getElementById('leanBtn').textContent='✨ Lean infört';
+  document.getElementById('log').innerHTML='<span class="tag">Flödesförbättring!</span> Ni rensar bort dubbelarbete och onödig väntan. En bestående del av slöseriet försvinner — kapacitet frigörs utan att någon jobbar hårdare.';
+  drawCurve(+document.getElementById('cBook').value/100);
+}
+
+/* ===================== Metrics ===================== */
+function renderMetrics(init){
+  const isSpec=S.type==='specialist';
+  const m=document.getElementById('metrics');
+  const waitLabel = isSpec? 'Genomloppstid' : 'Väntetid (rel.)';
+  const waitVal = S.lastWait==null ? '—' : (isSpec? S.lastWait.toFixed(1).replace('.',',')+' v' : S.lastWait.toFixed(1).replace('.',',')+'×');
+  const waitClass = S.lastWait==null?'':(isSpec?(S.lastWait>12?'danger':S.lastWait>9?'warn':'ok'):(S.lastWait>8?'danger':S.lastWait>6?'warn':'ok'));
+  const qClass = S.waitlist > S.baseDemand*4 ? 'danger' : S.waitlist > S.baseDemand*2.5 ? 'warn':'ok';
+  const moodClass = S.morale<45?'danger':S.morale<65?'warn':'ok';
+  const moneyClass = S.money<0?'danger':S.money<40?'warn':'ok';
+  m.innerHTML = `
+    <div class="metric ${waitClass}"><div class="lab">${waitLabel}</div><div class="val">${waitVal}</div></div>
+    <div class="metric ${qClass}"><div class="lab">${isSpec?'Väntelista':'Patienter i systemet'}</div><div class="val">${Math.round(S.waitlist)}</div></div>
+    <div class="metric ok"><div class="lab">Klara totalt</div><div class="val">${Math.round(S.cumThroughput)}</div></div>
+    <div class="metric ${moodClass}"><div class="lab">Personalnöjdhet</div><div class="val">${Math.round(S.morale)}<small style="font-size:14px;color:#bcae98">/100</small></div></div>
+    <div class="metric ${moneyClass}"><div class="lab">Ekonomi (ack.)</div><div class="val">${Math.round(S.money)}<small style="font-size:13px;color:#bcae98"> tkr</small></div></div>
+    <div class="metric ${S.cumServiceTotal? (S.cumServiceHits/S.cumServiceTotal>=0.7?'ok':S.cumServiceHits/S.cumServiceTotal>=0.4?'warn':'danger'):''}"><div class="lab">Mål uppnått</div><div class="val">${S.cumServiceTotal?Math.round(S.cumServiceHits/S.cumServiceTotal*100):0}<small style="font-size:14px;color:#bcae98">%</small></div></div>`;
+  if(!init){ m.querySelectorAll('.metric').forEach(x=>{x.classList.add('pop');setTimeout(()=>x.classList.remove('pop'),400)}); }
+}
+
+/* ===================== Charts ===================== */
+function drawHistory(){
+  const svg=document.getElementById('chart');
+  const W=460,H=220,pL=40,pR=14,pT=14,pB=28;
+  const hist=S.history;
+  if(hist.length===0){
+    svg.innerHTML=`<text x="${W/2}" y="${H/2}" fill="#bcae98" font-size="14" text-anchor="middle" font-family="Outfit">Kör första veckan för att se kurvan.</text>`;
+    return;
+  }
+  const isSpec=S.type==='specialist';
+  const maxV=Math.max(isSpec?14:12, ...hist.map(h=>h.val));
+  const n=Math.max(hist.length, S.mode==='mission'?14:hist.length);
+  const x=i=> pL + (i/(Math.max(1,n-1)))*(W-pL-pR);
+  const y=v=> (H-pB) - (Math.min(v,maxV)/maxV)*(H-pT-pB);
+  let grid='';
+  // target line
+  const target=isSpec?10:6;
+  const ty=y(target);
+  grid+=`<line x1="${pL}" y1="${ty}" x2="${W-pR}" y2="${ty}" stroke="#3fb27f" stroke-width="1.5" stroke-dasharray="5 4"/>`;
+  grid+=`<text x="${W-pR}" y="${ty-5}" fill="#3fb27f" font-size="10.5" text-anchor="end" font-family="Outfit" font-weight="600">mål ${isSpec?'10 v':'6×'}</text>`;
+  grid+=`<text x="${pL-6}" y="${pT+8}" fill="#a99c87" font-size="10" text-anchor="end" font-family="Outfit">${Math.round(maxV)}</text>`;
+  grid+=`<text x="${pL-6}" y="${H-pB}" fill="#a99c87" font-size="10" text-anchor="end" font-family="Outfit">0</text>`;
+  // area + line
+  let line='',area=`M${x(0)},${H-pB}`;
+  hist.forEach((h,i)=>{ const px=x(i),py=y(h.val); line+=(i===0?`M${px},${py}`:` L${px},${py}`); area+=` L${px},${py}`; });
+  area+=` L${x(hist.length-1)},${H-pB} Z`;
+  let dots='';
+  hist.forEach((h,i)=>{ const c=h.val>(isSpec?12:9)?'#e8543f':h.val>(isSpec?9:5)?'#ffb627':'#3fb27f'; dots+=`<circle cx="${x(i)}" cy="${y(h.val)}" r="4" fill="${c}" stroke="#fff" stroke-width="1.5"/>`; });
+  svg.innerHTML = grid +
+    `<path d="${area}" fill="#0f8a8a" opacity="0.08"/>`+
+    `<path d="${line}" fill="none" stroke="#0f8a8a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>`+
+    dots;
+}
+
+function drawCurve(rho){
+  const svg=document.getElementById('curve');
+  const W=460,H=150,pL=34,pR=14,pT=12,pB=26;
+  const f=r=> r/(1-r);
+  const X=r=> pL + (r-0.3)/(0.99-0.3)*(W-pL-pR);
+  const Y=v=> (H-pB) - (Math.min(v,20)/20)*(H-pT-pB);
+  let path='';
+  for(let r=0.3;r<=0.99;r+=0.01){ path+=(r===0.3?`M${X(r)},${Y(f(r))}`:` L${X(r)},${Y(f(r))}`); }
+  const dz=X(0.9);
+  const shade=`<rect x="${dz}" y="${pT}" width="${(W-pR)-dz}" height="${H-pB-pT}" fill="#e8543f" opacity="0.06"/>`;
+  let ax='';
+  [0.3,0.5,0.7,0.9].forEach(r=>{ ax+=`<text x="${X(r)}" y="${H-8}" fill="#a99c87" font-size="9.5" text-anchor="middle" font-family="Outfit">${Math.round(r*100)}%</text>`; });
+  const rr=Math.max(0.3,Math.min(0.985,rho));
+  const dot=`<circle cx="${X(rr)}" cy="${Y(f(rr))}" r="7" fill="#fff" stroke="#ff6b5e" stroke-width="3.5"/>`;
+  svg.innerHTML = shade + `<path d="${path}" fill="none" stroke="#0f8a8a" stroke-width="2.5"/>` + ax + dot;
+}
+
+/* ===================== Mission end ===================== */
+function endMission(){
+  const isSpec=S.type==='specialist';
+  const servicePct = S.cumServiceTotal? S.cumServiceHits/S.cumServiceTotal : 0;
+  // score: blend of service level, economy, morale
+  const econScore = Math.max(0, Math.min(1, (S.money+50)/250));
+  const moraleScore = S.morale/100;
+  const score = Math.round((servicePct*0.5 + econScore*0.25 + moraleScore*0.25)*100);
+  let grade, gcol, msg;
+  if(score>=85){grade='Utmärkt';gcol='var(--green)';msg='Du höll balansen mästerligt — kort kötid, frisk personal och ekonomi på plus genom hela säsongen. Precis den avvägning kursen handlar om.';}
+  else if(score>=65){grade='Bra jobbat';gcol='var(--teal)';msg='Stabilt styre. Du klarade säsongen med rimlig kötid och ordning på ekonomin. Finslipa balansen mellan beläggning och buffert så når du ända fram.';}
+  else if(score>=45){grade='Godkänt';gcol='var(--amber)';msg='Du tog dig igenom, men något fick stryka på foten — antingen sprang kön iväg eller så blev det dyrt. Titta på var beläggningen låg under piken.';}
+  else {grade='Tufft';gcol='var(--red)';msg='Säsongen blev övermäktig. Vanligaste orsaken: beläggningen pressades för högt så köerna skenade, eller så åt tomgång upp ekonomin. Prova mer buffert och tidig Lean.';}
+
+  const tips=[];
+  const avgUtil = S.history.reduce((a,h)=>a+h.util,0)/Math.max(1,S.history.length);
+  if(avgUtil>0.9) tips.push('Din genomsnittliga beläggning låg mycket högt — minns att väntetiden skenar olinjärt nära taket (Modul 2).');
+  if(S.morale<55) tips.push('Personalnöjdheten sjönk — ihållande hög beläggning sliter, och sliten personal sänker kapaciteten (Modul 6).');
+  if(S.money<0) tips.push('Ekonomin gick back — kom ihåg att omsättning kommer från avslutade patienter, inte från belagda timmar (Modul 6).');
+  if(!S.leanUsed) tips.push('Du använde aldrig flödesförbättring — Lean frigör kapacitet utan ny bemanning (Modul 6).');
+  if(servicePct<0.5) tips.push('Kötiden låg ofta över målet — dimensionera mot variationen och piken, inte mot snittet (Modul 3).');
+  if(tips.length===0) tips.push('Snyggt balanserat över alla mål. Prova en svårare inställning eller specialistkliniken härnäst.');
+
+  const r=document.getElementById('resultBody');
+  r.innerHTML=`
+    <div class="eyebrow">Säsongen är slut</div>
+    <div class="scorebig pop">${score}<small style="font-size:28px;color:#bcae98">/100</small></div>
+    <div class="grade" style="color:${gcol}">${grade}</div>
+    <div class="resmsg">${msg}</div>
+    <div class="rescard">
+      <b>Så gick det:</b><br>
+      Mål uppnått ${Math.round(servicePct*100)} % av veckorna ·
+      ${Math.round(S.cumThroughput)} patienter klara ·
+      Ekonomi ${Math.round(S.money)} tkr ·
+      Personalnöjdhet ${Math.round(S.morale)}/100
+    </div>
+    <div class="rescard"><b>Att ta med sig:</b><br>• ${tips.join('<br>• ')}</div>
+    <div class="resbtns">
+      <button class="btn" onclick="startGame()">Spela igen</button>
+      <button class="btn ghost" onclick="resetToSetup()">Nytt scenario</button>
+    </div>`;
+  show('result');
+  if(score>=65) burst();
+}
+
+function burst(){
+  const cols=['#0f8a8a','#ff6b5e','#ffb627','#3fb27f'];
+  for(let i=0;i<80;i++){
+    const c=document.createElement('div');c.className='confetti';
+    c.style.left=Math.random()*100+'vw';c.style.background=cols[i%cols.length];
+    document.body.appendChild(c);
+    const dur=2200+Math.random()*1500;
+    c.animate([{transform:'translateY(0) rotate(0)',opacity:1},{transform:`translateY(${innerHeight+60}px) rotate(${Math.random()*720}deg)`,opacity:.9}],{duration:dur,easing:'cubic-bezier(.3,.7,.5,1)'});
+    setTimeout(()=>c.remove(),dur);
+  }
+}
+</script>
+</body>
+</html>

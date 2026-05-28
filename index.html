@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Införande i produktionsledning</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,900&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="nav"></div>
+<div class="wrap">
+  <div class="hero">
+    <div class="eyebrow">Folktandvården · Spår 1 — Operativ grund</div>
+    <h1>Införande i <span class="em">produktionsledning</span></h1>
+    <p>En interaktiv kurs i produktions- och kapacitetsplanering. Läs, skruva på systemet själv, och testa att du förstått — modul för modul. Allt vilar på några få idéer: flödet, flaskhalsen, variationen och Lilles lag.</p>
+    <div style="margin-top:22px"><a class="btn big" href="modul0.html">Börja kursen →</a></div>
+  </div>
+
+  <div class="sectionlabel">Grunderna</div>
+  <div class="modgrid">
+    <a class="modcard" href="modul0.html"><div class="num">0</div><h3>Varför produktionsledning?</h3><p>Vilket problem löser ämnet — och varför fungerar inte helheten ens när alla jobbar hårt?</p></a>
+    <a class="modcard" href="modul1.html"><div class="num">1</div><h3>Att se kliniken som ett flöde</h3><p>Genomloppstid, genomströmning och Lilles lag.<span class="feat">● Interaktivt labb</span></p></a>
+    <a class="modcard" href="modul2.html"><div class="num">2</div><h3>Varför köer uppstår och växer</h3><p>Variation som köernas motor och den olinjära beläggningskurvan.<span class="feat">● Interaktivt labb</span></p></a>
+    <a class="modcard" href="modul3.html"><div class="num">3</div><h3>Kapacitet och dimensionering</h3><p>Praktisk kapacitet, servicenivå och poolningsfördelen.</p></a>
+  </div>
+
+  <div class="sectionlabel">I vardagen</div>
+  <div class="modgrid">
+    <a class="modcard" href="modul4.html"><div class="num">4</div><h3>Schemaläggning och tidbokning</h3><p>Uteblivanden, buffertar, behandlartid och öppen tillgång.<span class="feat">🎮 Simulator</span></p></a>
+    <a class="modcard" href="modul5.html"><div class="num">5</div><h3>Prognoser och variation över tid</h3><p>Mönster, säsong och osäkerhet — att planera med framförhållning.</p></a>
+  </div>
+
+  <div class="sectionlabel">Fördjupning</div>
+  <div class="modgrid">
+    <a class="modcard" href="modul6.html"><div class="num">6</div><h3>Lean och flödeseffektivisering</h3><p>Flödes- kontra resurseffektivitet, slöseri och var omsättningen faktiskt kommer ifrån.</p></a>
+    <a class="modcard" href="modul7.html"><div class="num">7</div><h3>Produktionsnormer och behandlartid</h3><p>Olika tempo, norm kontra verklighet, och att mäta utan att övervaka.</p></a>
+  </div>
+
+  <footer class="foot">Ett interaktivt komplement till kursen <em>Införande i produktionsledning</em>. Siffrorna i labben är illustrativa men sambanden äkta.</footer>
+</div>
+<script src="app.js"></script>
+<script>
+  document.getElementById('nav').innerHTML = buildNav('index.html');
+  // mark completed modules from local progress
+  getDone().forEach(id=>{ const c=document.querySelector(`.modcard[href="${id}"]`); if(c) c.classList.add('done'); });
+</script>
+</body>
+</html>
